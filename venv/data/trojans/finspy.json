@@ -1,0 +1,18 @@
+{
+	"name": "finspy",
+	"detail_name": "Finfisher Finspy",
+	"alias": "Backdoor:Win32/R2d2.A",
+	"symptoms": {
+		"fileExists": [
+			"%WIN%\\System32\\mfc42ul.dll",
+			"%WIN%\\System32\\winsys32.sys"
+		],
+		"registryKeyValue": [
+			[
+				"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows",
+				"AppInit_DLLs",
+				"mfc42ul.dll"
+			]
+		]
+	}
+}

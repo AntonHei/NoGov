@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter.ttk import *
 from winreg import *
 from re import search
+import json
 
 # Variables
 window = None
@@ -11,70 +12,20 @@ curOutput = None
 curOutputText = ""
 path_icon = ''
 
-# Spyware - Intern Name
-spyware_names = [
-    # Finfisher Finspy
-    'finspy',
-    # Blackshades
-    'blackshades'
-]
-
-# Spyware - Detail Name
-spyware_detail_names = [
-    # Finfisher Finspy
-    'Finfisher Finspy',
-    # Blackshades
-    'Blackshades'
-]
-
-# Spyware - Detail Suffix
-spyware_detail_suffix = [
-    # Finfisher Finspy
-    'Backdoor:Win32/R2d2.A',
-    # Blackshades
-    'Worm:Win32/Cambot.A'
-]
-
-# Spyware - Look up as many files (Does Exist search)
-spyware_exist_paths = [
-    # Finfisher Finspy
-    [
-        os.environ['WINDIR'] + '\System32\mfc42ul.dll',
-        os.environ['WINDIR'] + '\System32\winsys32.sys'
-    ],
-    # Blackshades
-    [
-        os.environ['TEMP'] + '\goolge.exe.jpg',
-        os.environ['APPDATA'] + '\goolge.exe'
-    ]
-]
-
-# Spyware - Registry Checks
-# First: Path
-# Second: Key
-# Value to search for (Regex Search)
-spyware_registry_key = [
-    # Finfisher Finspy
-    [
-        [
-            'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows',
-            'AppInit_DLLs',
-            'mfc42ul.dll'
-        ]
-    ],
-    # Blackshades
-    [
-        [
-            'SOFTWARE\Microsoft\Windows\CurrentVersion\Run',
-            'Google Tools',
-            'goolge.exe'
-        ],
-        [
-            'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run',
-            'Google Tools',
-            'goolge.exe'
-        ]
-    ]
+# Path Replaces
+pathReplaces = [
+    {
+        'toReplace': '%WINDIR%',
+        'replaceWith': os.environ['WINDIR']
+    },
+    {
+        'toReplace': '%TEMP%',
+        'replaceWith': os.environ['TEMP']
+    },
+    {
+        'toReplace': '%APPDATA%',
+        'replaceWith': os.environ['APPDATA']
+    }
 ]
 
 # Start Function
@@ -106,10 +57,15 @@ def start():
 def startCheck():
     clearOutput()
 
-    i = 0
-    for curName in spyware_names:
-        addToOutput(spyware_detail_names[i] + ': ' + str(checkSpecificSpyware(curName)) + "\n")
-        i = i + 1
+    trojan_files = [pos_json for pos_json in os.listdir('../data/trojans/') if pos_json.endswith('.json')]
+
+    for curTrojanFile in trojan_files:
+        debug_log(-1, '---------------------------')
+        debug_log(0, 'Loading trojan data from file: \"' + str(curTrojanFile)+"\"")
+        curTrojanData = getTrojanJSONData(str(curTrojanFile))
+
+        curTrojanState = str(checkSpecificSpyware(curTrojanData))
+        addToOutput(curTrojanData['name'] + ': ' + curTrojanState + "\n")
 
 def clearOutput():
     global curOutputText
@@ -123,37 +79,72 @@ def addToOutput(string):
     curOutput.config(text=curOutputText)
     curOutput.pack()
 
-def checkSpecificSpyware(type):
-    debug_log(0, "Checking for: " + type)
-    registry = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
+def getTrojanJSONData(filename):
+    trojanFileRAWData = None
+    with open('../data/trojans/' + filename) as curFile:
+        trojanFileRAWData = curFile.read()
+    return json.loads(trojanFileRAWData)
+
+def convertPath(pathString):
+    for item in pathReplaces:
+        if search(item['toReplace'], str(pathString)):
+            # PathString contains a value that needs to be replaced
+            pathString = pathString.replace(item['toReplace'], item['replaceWith'])
+    return pathString
+
+
+def checkSpecificSpyware(trojanData):
+    debug_log(5, "Checking for trojan: \"" + trojanData['name'] + "\"")
+
+    registry_hklm = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
     out = False
 
-    foundSuffix = ''
+    suffix = ''
 
-    curIndex = spyware_names.index(type)
+    # Symptom Check: File exists
+    for curPath in trojanData['symptoms']['fileExists']:
+        # Convert Path
+        curPath = convertPath(curPath)
 
-    for curPath in spyware_exist_paths[curIndex]:
+        debug_log(5, 'Searching for: \"' + curPath + '\"')
         if os.path.isfile(curPath):
+            # File found
             out = True
-            foundSuffix = ' - ' + spyware_detail_suffix[curIndex]
+            suffix = ' - ' + trojanData['alias']
+
+            debug_log(6, 'Suspicous file found: \"' + str(curPath) + '\"')
+        else:
+            # File not found
+            debug_log(6, 'Suspicous file not found: \"' + str(curPath) + '\"')
             break
-        for curRegistryKey in spyware_registry_key[curIndex]:
-            try:
-                parentKey = OpenKey(registry, str(curRegistryKey[0]))
-                keyValue = QueryValueEx(parentKey, curRegistryKey[1])
-                if search(curRegistryKey[2], str(keyValue)):
-                    out = True
-                    foundSuffix = ' - ' + spyware_detail_suffix[curIndex]
-                    break
-            except:
-                debug_log(0, "Regkey not found. Value: " + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]))
+
+    # Symptom Check: Registry Value contains
+    for curRegistryKey in trojanData['symptoms']['registryKeyValue']:
+        try:
+            parentKey = OpenKey(registry_hklm, str(curRegistryKey[0]))
+            keyValue = QueryValueEx(parentKey, curRegistryKey[1])
+            if search(curRegistryKey[2], str(keyValue)):
+                # Regkey value does contain
+                out = True
+                suffix = ' - ' + trojanData['alias']
+
+                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"' + ' does contain suspicious value: \"' + curRegistryKey[2] + '\"')
+            else:
+                # Regkey value does not contain
+                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"' + ' does not contain suspicious value: \"' + curRegistryKey[2] + '\"')
+                break
+        except:
+            pass
+            # Regkey doesn't exist
+            debug_log(6, 'Regkey not found: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"')
 
     # Beautify output
     if out:
-        out = 'Was found' + foundSuffix
+        out = 'Was found' + suffix
     else:
-        out = 'Not found'
+        out = 'Not found' + suffix
 
+    debug_log(7, trojanData['name'] + " " + out)
     return out
 
 def debug_log(type, value):
@@ -166,6 +157,12 @@ def debug_log(type, value):
         prefix = '[ERROR] '
     if type == 3:
         prefix = '[CRITITCAL] '
+    if type == 5:
+        prefix = '[CHECK] '
+    if type == 6:
+        prefix = '[SYMPTOMRESULT] '
+    if type == 7:
+        prefix = '[RESULT] '
     print(prefix + value)
 
 # Init

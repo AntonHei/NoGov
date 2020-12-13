@@ -1,0 +1,23 @@
+{
+	"name": "blackshades",
+	"detail_name": "Blackshades",
+	"alias": "Worm:Win32/Cambot.A",
+	"symptoms": {
+		"fileExists": [
+			"%TEMP%\\goolge.exe.jpg",
+			"%APPDATA%\\goolge.exe"
+		],
+		"registryKeyValue": [
+			[
+				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+				"Google Tools",
+				"goolge.exe"
+			],
+			[
+				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
+				"Google Tools",
+				"goolge.exe"
+			]
+		]
+	}
+}
