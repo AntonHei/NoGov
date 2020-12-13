@@ -9,6 +9,15 @@
 - (ToDo) Detecting trojans by their processes
 - (ToDo) Removing detected trojans from the infected system
 
+**Viruses**
+<br>
+NoGov currently detects following trojans:
+<br>
+- Finfisher FinSpy
+- Blackshades
+- njRAT Bladabindi
+- XtremeRat
+
 **Data:**
 <br>
 The Trojan Data can be found in the "/venv/data/trojans/" folder.
