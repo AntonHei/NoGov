@@ -1,0 +1,19 @@
+{
+	"name": "njrat",
+	"detail_name": "njRAT Bladabindi",
+	"alias": "Backdoor:MSIL/NJRat.A!bit",
+	"probabilityLevel": "3",
+	"symptoms": {
+		"fileExists": [
+			"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\chrome.exe"
+		],
+		"registryKeyValue": [
+			[
+				"HKCU",
+				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+				"Chrome",
+				""
+			]
+		]
+	}
+}

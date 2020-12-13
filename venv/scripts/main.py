@@ -11,11 +11,13 @@ window = None
 curOutput = None
 curOutputText = ""
 path_icon = ''
+registry_hklm = None
+registry_hkcu = None
 
 # Path Replaces
 pathReplaces = [
     {
-        'toReplace': '%WINDIR%',
+        'toReplace': '%WIN%',
         'replaceWith': os.environ['WINDIR']
     },
     {
@@ -39,7 +41,7 @@ def start():
 
     style = Style()
     style.configure('Title.TLabel', font=('calibri', 15, 'bold'), borderwidth='4', foreground="black")
-    style.configure('TLabel', font=('calibri', 10), borderwidth='4', foreground="black")
+    style.configure('TLabel', font=('calibri', 10), borderwidth='4', foreground="black", justify='center')
     style.configure('TButton', font=('calibri', 10, 'bold'), foreground="green")
 
     label_1 = Label(window, text="NoGov 1.0.0", style="Title.TLabel")
@@ -65,7 +67,7 @@ def startCheck():
         curTrojanData = getTrojanJSONData(str(curTrojanFile))
 
         curTrojanState = str(checkSpecificSpyware(curTrojanData))
-        addToOutput(curTrojanData['name'] + ': ' + curTrojanState + "\n")
+        addToOutput(curTrojanData['detail_name'] + ': \n' + curTrojanState + "\n")
 
 def clearOutput():
     global curOutputText
@@ -92,11 +94,37 @@ def convertPath(pathString):
             pathString = pathString.replace(item['toReplace'], item['replaceWith'])
     return pathString
 
+def getOpenRegKey(hk, key):
+    out = None
+    if hk == "HKLM":
+        out = OpenKey(registry_hklm, str(key))
+    if hk == "HKCU":
+        out = OpenKey(registry_hkcu, str(key))
+    return out
+
+def getProbabilityText(probabilityLevel):
+    out = ""
+    probabilityLevel = int(probabilityLevel)
+    if probabilityLevel == 1:
+        out = "Definitely"
+    if probabilityLevel == 2:
+        out = "Very likely"
+    if probabilityLevel == 3:
+        out = "Likely"
+    if probabilityLevel == 4:
+        out = "Evenutally"
+    if probabilityLevel == 5:
+        out = "Unreliable"
+
+    return out
 
 def checkSpecificSpyware(trojanData):
     debug_log(5, "Checking for trojan: \"" + trojanData['name'] + "\"")
 
+    global registry_hklm, registry_hkcu
     registry_hklm = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
+    registry_hkcu = ConnectRegistry(None, HKEY_CURRENT_USER)
+
     out = False
 
     suffix = ''
@@ -110,7 +138,7 @@ def checkSpecificSpyware(trojanData):
         if os.path.isfile(curPath):
             # File found
             out = True
-            suffix = ' - ' + trojanData['alias']
+            suffix = '\nAlias: ' + trojanData['alias'] + "\n" + "Probability: " + getProbabilityText(trojanData['probabilityLevel'])
 
             debug_log(6, 'Suspicous file found: \"' + str(curPath) + '\"')
         else:
@@ -121,30 +149,32 @@ def checkSpecificSpyware(trojanData):
     # Symptom Check: Registry Value contains
     for curRegistryKey in trojanData['symptoms']['registryKeyValue']:
         try:
-            parentKey = OpenKey(registry_hklm, str(curRegistryKey[0]))
-            keyValue = QueryValueEx(parentKey, curRegistryKey[1])
-            if search(curRegistryKey[2], str(keyValue)):
+            parentKey = getOpenRegKey(str(curRegistryKey[0]), str(curRegistryKey[1]))
+            keyValue = QueryValueEx(parentKey, curRegistryKey[2])
+
+            if search(curRegistryKey[3], str(keyValue)):
                 # Regkey value does contain
                 out = True
-                suffix = ' - ' + trojanData['alias']
+                suffix = '\nAlias: ' + trojanData['alias'] + "\n" + "Probability: " + getProbabilityText(trojanData['probabilityLevel'])
 
-                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"' + ' does contain suspicious value: \"' + curRegistryKey[2] + '\"')
+                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + '\\' + str(curRegistryKey[1]) + "\\" + str(curRegistryKey[2]) + '\"' + ' does contain suspicious value: \"' + curRegistryKey[3] + '\"')
             else:
                 # Regkey value does not contain
-                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"' + ' does not contain suspicious value: \"' + curRegistryKey[2] + '\"')
+                debug_log(6, 'Regkey: \"' + str(curRegistryKey[0]) + '\\' + str(curRegistryKey[1]) + "\\" + str(curRegistryKey[2]) + '\"' + ' does not contain suspicious value: \"' + curRegistryKey[3] + '\"')
                 break
         except:
             pass
             # Regkey doesn't exist
-            debug_log(6, 'Regkey not found: \"' + str(curRegistryKey[0]) + "\\" + str(curRegistryKey[1]) + '\"')
+            debug_log(6, 'Regkey not found: \"' + str(curRegistryKey[0]) + '\\' + str(curRegistryKey[1]) + "\\" + str(curRegistryKey[2]) + '\"')
 
     # Beautify output
     if out:
-        out = 'Was found' + suffix
+        out = 'Was found' + suffix + "\n"
+        debug_log(7, trojanData['name'] + " was found")
     else:
-        out = 'Not found' + suffix
+        out = 'Not found' + suffix + "\n"
+        debug_log(7, trojanData['name'] + " was not found")
 
-    debug_log(7, trojanData['name'] + " " + out)
     return out
 
 def debug_log(type, value):

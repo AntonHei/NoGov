@@ -1,7 +1,8 @@
 {
 	"name": "blackshades",
 	"detail_name": "Blackshades",
-	"alias": "Worm:Win32/Cambot.A",
+	"alias": "BackDoor.Blackshades.1",
+	"probabilityLevel": "1",
 	"symptoms": {
 		"fileExists": [
 			"%TEMP%\\goolge.exe.jpg",
@@ -9,11 +10,25 @@
 		],
 		"registryKeyValue": [
 			[
+				"HKLM",
 				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
 				"Google Tools",
 				"goolge.exe"
 			],
 			[
+				"HKCU",
+				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+				"Google Tools",
+				"goolge.exe"
+			],
+			[
+				"HKLM",
+				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
+				"Google Tools",
+				"goolge.exe"
+			],
+			[
+				"HKCU",
 				"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
 				"Google Tools",
 				"goolge.exe"

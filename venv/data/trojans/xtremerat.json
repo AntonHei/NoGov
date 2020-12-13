@@ -1,0 +1,24 @@
+{
+	"name": "xtremerat",
+	"detail_name": "XtremeRat",
+	"alias": "Win32/Xtrat",
+	"probabilityLevel": "1",
+	"symptoms": {
+		"fileExists": [],
+		"registryKeyValue": [
+			[
+				"HKLM",
+				"SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{5460C4DF-B266-909E-CB58-E32B79832EB2}",
+				"StubPath",
+				""
+			],
+			[
+				"HKLM",
+				"SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{5D6J2PL7-665M-030P-4SMQ-7L1F1X7AS68U}",
+				"StubPath",
+				""
+			]
+
+		]
+	}
+}
